@@ -3,15 +3,24 @@ package empapp;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.Trigger;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class EmployeeService {
+
+    private TaskScheduler taskScheduler;
 
     private EmployeeRepository employeeRepository;
 
@@ -22,6 +31,9 @@ public class EmployeeService {
             employee.addAddresses(command.getAddresses().stream().map(a -> modelMapper.map(a, Address.class)).collect(Collectors.toList()));
         }
         employeeRepository.save(employee);
+
+        taskScheduler.schedule(EmployeeService::logEmployeeCreated, Instant.now().plusSeconds(5));
+
         return modelMapper.map(employee, EmployeeDto.class);
     }
 
@@ -52,4 +64,14 @@ public class EmployeeService {
                 .orElseThrow(() -> new NotFoundException("Employee not found with id: " + id));
         employeeRepository.delete(employee);
     }
+
+    private static void logEmployeeCreated() {
+        log.info("Employee has been created");
+    }
+
+    @Scheduled(fixedRate = 5000)
+    public void logCountOfEmployees() {
+        log.info("The number of employees: {}", employeeRepository.findAll().size());
+    }
+
 }
