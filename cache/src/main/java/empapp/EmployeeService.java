@@ -47,9 +47,13 @@ public class EmployeeService {
     }
 
     @Transactional
-    @Caching(
-            evict = {@CacheEvict(value = "employees", allEntries = true)},
-            put = {@CachePut(value = "employee", key = "#id")}
+    @Caching(evict = {
+            @CacheEvict(value = "employees", allEntries = true)
+            //,@CacheEvict(value = "employee", key = "#id")
+    },
+        put = {
+            @CachePut(value = "employee", key = "#id")
+        }
     )
     public EmployeeDto updateEmployee(long id, UpdateEmployeeCommand command) {
         Employee employeeToModify = employeeRepository.getById(id);
