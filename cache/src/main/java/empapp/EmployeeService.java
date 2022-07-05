@@ -2,7 +2,10 @@ package empapp;
 
 import lombok.AllArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +18,8 @@ public class EmployeeService {
 
     private EmployeeRepository employeeRepository;
 
+    @CacheEvict(value = "employees", allEntries = true)
+    @CachePut(value = "employee", key = "#result.id")
     public EmployeeDto createEmployee(CreateEmployeeCommand command) {
         Employee employee = new Employee(command.getName());
         ModelMapper modelMapper = new ModelMapper();
@@ -25,6 +30,7 @@ public class EmployeeService {
         return modelMapper.map(employee, EmployeeDto.class);
     }
 
+    @Cacheable("employees")
     public List<EmployeeDto> listEmployees() {
         ModelMapper modelMapper = new ModelMapper();
         return employeeRepository.findAllWithAddresses().stream()
@@ -32,6 +38,7 @@ public class EmployeeService {
                 .collect(Collectors.toList());
     }
 
+    @Cacheable("employee")
     public EmployeeDto findEmployeeById(long id) {
         ModelMapper modelMapper = new ModelMapper();
         return modelMapper.map(employeeRepository.findByIdWithAddresses(id)
@@ -40,6 +47,10 @@ public class EmployeeService {
     }
 
     @Transactional
+    @Caching(
+            evict = {@CacheEvict(value = "employees", allEntries = true)},
+            put = {@CachePut(value = "employee", key = "#id")}
+    )
     public EmployeeDto updateEmployee(long id, UpdateEmployeeCommand command) {
         Employee employeeToModify = employeeRepository.getById(id);
         employeeToModify.setName(command.getName());
@@ -47,6 +58,9 @@ public class EmployeeService {
         return modelMapper.map(employeeToModify, EmployeeDto.class);
     }
 
+    @Caching(evict = {
+        @CacheEvict(value = "employees", allEntries = true),
+        @CacheEvict(value = "employee", key = "#id")})
     public void deleteEmployee(long id) {
         Employee employee = employeeRepository.findByIdWithAddresses(id)
                 .orElseThrow(() -> new NotFoundException("Employee not found with id: " + id));
